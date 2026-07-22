@@ -14,6 +14,14 @@ class ContextEngine:
         self._current_command: str = ""
         self._session_category: str = ""
 
+    def get_shell_state(self) -> object:
+        try:
+            from shellsense.context.inferrer import ShellStateInferrer
+
+            return ShellStateInferrer().infer()
+        except Exception:
+            return None
+
     def set_previous_command(self, cmd: str) -> None:
         self._previous_command = cmd
 

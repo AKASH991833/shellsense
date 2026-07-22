@@ -20,6 +20,36 @@ logger = get_logger(__name__)
 _suggestion_cache = SuggestionCache(max_size=500, default_ttl=300.0)
 
 
+def _get_workflow_suggestions(
+    query: str,
+    limit: int = 3,
+) -> list[dict[str, object]]:
+    try:
+        from shellsense.context.inferrer import ShellStateInferrer
+        from shellsense.workflows.matcher import WorkflowMatcher
+
+        inferrer = ShellStateInferrer()
+        state = inferrer.infer()
+        matcher = WorkflowMatcher()
+        wf_suggestions = matcher.get_suggestions(query, state=state, limit=limit)
+        results: list[dict[str, object]] = []
+        for ws in wf_suggestions:
+            results.append(
+                {
+                    "name": ws.suggested_command,
+                    "short_description": f"[workflow] {ws.description} (step {ws.step_number}/{ws.total_steps})",
+                    "category": ws.category,
+                    "_match_type": "workflow",
+                    "_workflow_name": ws.workflow_name,
+                    "_step": ws.step_number,
+                    "_total_steps": ws.total_steps,
+                }
+            )
+        return results
+    except Exception:
+        return []
+
+
 def suggest_commands(
     db: DatabaseManager,
     query: str,
@@ -40,6 +70,10 @@ def suggest_commands(
         results = _predict_multi_word(db, query, limit=limit)
     else:
         results = _suggest_single_word(db, query, limit, weights, context)
+
+    wf = _get_workflow_suggestions(query, limit=3)
+    if wf:
+        results = wf + results
 
     record_search(db, query, len(results))
     _suggestion_cache.set(cache_key, results)
@@ -64,6 +98,10 @@ def predict_commands(
         results = _predict_multi_word(db, partial, limit=limit)
     else:
         results = _predict_single_word(db, partial, limit=limit)
+
+    wf = _get_workflow_suggestions(partial, limit=3)
+    if wf:
+        results = wf + results
 
     _suggestion_cache.set(cache_key, results)
     return results[:limit]
