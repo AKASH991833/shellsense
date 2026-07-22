@@ -1,0 +1,1 @@
+# ShellSense AI Plugin Examples

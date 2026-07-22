@@ -1,0 +1,14 @@
+{
+    "id": "git-helper",
+    "name": "Git Helper",
+    "version": "0.1.0",
+    "author": "ShellSense AI",
+    "description": "Git command helper with smart suggestions and branch management",
+    "entry_point": "plugin",
+    "min_shellsense_version": "0.1.0",
+    "permissions": ["shell.execute", "system.info"],
+    "hooks": ["before_command"],
+    "commands": [],
+    "platforms": ["linux"],
+    "license": "MIT"
+}

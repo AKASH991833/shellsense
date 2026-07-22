@@ -1,0 +1,115 @@
+[build-system]
+requires = ["setuptools>=69.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "shellsense"
+version = "1.0.0"
+description = "Think Less. Command More. — Intelligent Linux Terminal Assistant"
+readme = "README.md"
+authors = [
+    { name = "ShellSense AI" },
+]
+maintainers = [
+    { name = "ShellSense AI" },
+]
+license = { text = "MIT" }
+requires-python = ">=3.12"
+keywords = [
+    "linux",
+    "terminal",
+    "assistant",
+    "cli",
+    "productivity",
+    "shell",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: System :: Shells",
+    "Topic :: Utilities",
+    "Topic :: System :: Systems Administration",
+]
+dependencies = [
+    "typer>=0.12.0",
+    "rich>=13.7.0",
+    "rapidfuzz>=3.9.0",
+]
+
+[project.optional-dependencies]
+ai = [
+    "anthropic>=0.49.0",
+    "openai>=1.55.0",
+    "google-generativeai>=0.8.0",
+]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.1.0",
+    "black>=24.0.0",
+    "ruff>=0.3.0",
+    "mypy>=1.8.0",
+    "pre-commit>=3.6.0",
+    "bandit>=1.7.0",
+    "safety>=3.0.0",
+]
+
+[project.urls]
+Homepage = "https://shellsense.ai"
+Repository = "https://github.com/shellsense-ai/shellsense"
+Documentation = "https://shellsense-ai.github.io/shellsense"
+Issues = "https://github.com/shellsense-ai/shellsense/issues"
+Changelog = "https://github.com/shellsense-ai/shellsense/blob/main/CHANGELOG.md"
+Security = "https://github.com/shellsense-ai/shellsense/security/policy"
+
+[project.scripts]
+ss = "shellsense.cli.app:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["shellsense*"]
+
+[tool.black]
+line-length = 88
+target-version = ["py312"]
+include = '\.pyi?$'
+
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+ignore_missing_imports = true
+warn_unreachable = true
+disallow_untyped_defs = true
+disallow_any_unimported = false
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+
+[tool.coverage.run]
+source = ["shellsense"]
+omit = ["*/tests/*"]
+
+[tool.coverage.report]
+show_missing = true

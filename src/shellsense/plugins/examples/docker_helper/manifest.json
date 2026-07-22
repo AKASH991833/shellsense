@@ -1,0 +1,14 @@
+{
+    "id": "docker-helper",
+    "name": "Docker Helper",
+    "version": "0.1.0",
+    "author": "ShellSense AI",
+    "description": "Docker command assistant with container management",
+    "entry_point": "plugin",
+    "min_shellsense_version": "0.1.0",
+    "permissions": ["shell.execute", "system.info", "logs.access"],
+    "hooks": ["before_command", "command_failure"],
+    "commands": [],
+    "platforms": ["linux"],
+    "license": "MIT"
+}

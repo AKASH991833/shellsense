@@ -1,0 +1,38 @@
+{
+  "general": {
+    "theme": "default",
+    "language": "en",
+    "verbose": false
+  },
+  "logging": {
+    "level": "INFO",
+    "file": "~/.shellsense/shellsense.log",
+    "max_bytes": 10485760,
+    "backup_count": 5
+  },
+  "database": {
+    "path": "~/.shellsense/shellsense.db",
+    "timeout": 5.0
+  },
+  "ai": {
+    "enabled": false,
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "api_key": "",
+    "temperature": 0.3,
+    "max_tokens": 1024
+  },
+  "suggestions": {
+    "enabled": true,
+    "max_suggestions": 5,
+    "min_confidence": 0.6
+  },
+  "correction": {
+    "enabled": true,
+    "fuzzy_threshold": 0.8
+  },
+  "learning": {
+    "enabled": false,
+    "history_size": 1000
+  }
+}
