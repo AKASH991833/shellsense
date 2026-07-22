@@ -197,6 +197,7 @@ def get_history_summary(db: DatabaseManager) -> dict[str, int]:
         ("suggestion_history", "suggestions"),
         ("explanation_history", "explanations"),
         ("learning_data", "learning_entries"),
+        ("command_history", "commands"),
     ]:
         cursor = db.execute(f"SELECT COUNT(*) as cnt FROM {table}")
         row = cursor.fetchone()
@@ -206,3 +207,46 @@ def get_history_summary(db: DatabaseManager) -> dict[str, int]:
         else:
             counts[label] = 0
     return counts
+
+
+def search_history(
+    db: DatabaseManager,
+    query: str,
+    limit: int = 10,
+) -> list[dict[str, object]]:
+    try:
+        from rapidfuzz import fuzz, process
+    except ImportError:
+        cursor = db.execute(
+            "SELECT DISTINCT command FROM command_history WHERE command LIKE ? ORDER BY timestamp DESC LIMIT ?",
+            (f"%{query}%", limit),
+        )
+        return [dict(row) for row in cursor.fetchall()]
+
+    cursor = db.execute(
+        "SELECT command, COUNT(*) as frequency FROM command_history GROUP BY command ORDER BY frequency DESC LIMIT 200"
+    )
+    rows = cursor.fetchall()
+    commands = [str(row["command"]) for row in rows if row["command"]]
+    if not commands:
+        return []
+
+    scores = process.extract(query, commands, scorer=fuzz.WRatio, limit=limit)
+    result: list[dict[str, object]] = []
+    seen: set[str] = set()
+    for text, score, _ in scores:
+        if text not in seen:
+            seen.add(text)
+            freq = 0
+            for row in rows:
+                if str(row["command"]) == text:
+                    freq = int(row["frequency"]) if row["frequency"] else 0
+                    break
+            result.append(
+                {
+                    "command": text,
+                    "frequency": freq,
+                    "score": score,
+                }
+            )
+    return result

@@ -130,6 +130,7 @@ from shellsense.cli.commands.template_cmd import (
     template_list_callback,
     template_show_callback,
 )
+from shellsense.cli.commands.tui_cmd import tui_callback
 from shellsense.cli.commands.version import version_callback
 from shellsense.startup import initialize
 from shellsense.utils.logging import get_logger
@@ -1191,3 +1192,9 @@ def config_reset() -> None:
 def config_path() -> None:
     """Show configuration file path."""
     config_path_callback()
+
+
+@app.command(name="tui")
+def tui() -> None:
+    """Terminal UI browser for commands."""
+    tui_callback()

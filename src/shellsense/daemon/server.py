@@ -300,6 +300,26 @@ class DaemonServer:
                 else:
                     result = {"success": False, "error": "No command provided"}
 
+            elif req_type == "history_search":
+                if not self._engine:
+                    return {"success": False, "error": "Engine not loaded"}
+                partial = request.get("partial", "")
+                limit = request.get("limit", 10)
+                from shellsense.knowledge.history import search_history
+
+                history_results = search_history(self._engine.db, partial, limit=limit)
+                result = {
+                    "success": True,
+                    "query": partial,
+                    "results": [
+                        {
+                            "text": str(r.get("command", "")),
+                            "score": _to_score(r.get("frequency", 0)),
+                        }
+                        for r in history_results
+                    ],
+                }
+
             else:
                 result = {"success": False, "error": f"Unknown type: {req_type}"}
 
