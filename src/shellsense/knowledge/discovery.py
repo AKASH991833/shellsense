@@ -4,6 +4,8 @@ import os
 import re
 import shutil
 import subprocess
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any
 
@@ -12,6 +14,10 @@ from shellsense.utils.logging import get_logger
 logger = get_logger(__name__)
 
 CommandDict = dict[str, Any]
+
+_MAN_CACHE: dict[str, str] = {}
+_MAN_CACHE_TTL: int = 86400
+_MAN_CACHE_LAST: float = 0.0
 
 CATEGORY_KEYWORDS: dict[str, list[str]] = {
     "files": [
@@ -394,6 +400,33 @@ def get_command_path(name: str) -> str | None:
     return shutil.which(name)
 
 
+def _get_cached_man(name: str) -> str:
+    now = time.time()
+    global _MAN_CACHE_LAST
+    if now - _MAN_CACHE_LAST > _MAN_CACHE_TTL:
+        _MAN_CACHE.clear()
+    _MAN_CACHE_LAST = now
+    if name in _MAN_CACHE:
+        return _MAN_CACHE[name]
+    try:
+        result = subprocess.run(
+            ["man", name],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            timeout=5,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            text = result.stdout.strip()
+            text = _strip_man_formatting(text)
+            _MAN_CACHE[name] = text
+            return text
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        pass
+    _MAN_CACHE[name] = ""
+    return ""
+
+
 def get_description_via_whatis(name: str) -> str:
     try:
         result = subprocess.run(
@@ -415,30 +448,19 @@ def get_description_via_whatis(name: str) -> str:
 
 
 def get_description_via_man(name: str) -> str:
-    try:
-        result = subprocess.run(
-            ["man", name],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
-            text=True,
-            timeout=5,
-        )
-        if result.returncode != 0 or not result.stdout.strip():
-            return ""
-        text = result.stdout.strip()
-        text = _strip_man_formatting(text)
-        match = re.search(
-            r"NAME\s+\S+\s+\-\-\s+(.+?)(?:\n\n|\n\s*\n)",
-            text,
-            re.DOTALL | re.IGNORECASE,
-        )
-        if match:
-            desc = match.group(1).strip()
-            desc = re.sub(r"\s+", " ", desc)
-            return desc[:500]
+    text = _get_cached_man(name)
+    if not text:
         return ""
-    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
-        return ""
+    match = re.search(
+        r"NAME\s+\S+\s+\-\-\s+(.+?)(?:\n\n|\n\s*\n)",
+        text,
+        re.DOTALL | re.IGNORECASE,
+    )
+    if match:
+        desc = match.group(1).strip()
+        desc = re.sub(r"\s+", " ", desc)
+        return desc[:500]
+    return ""
 
 
 def _strip_man_formatting(text: str) -> str:
@@ -479,84 +501,60 @@ def get_description(name: str) -> str:
 
 
 def get_syntax_via_man(name: str) -> str:
-    try:
-        result = subprocess.run(
-            ["man", name],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
-            text=True,
-            timeout=5,
-        )
-        if result.returncode != 0 or not result.stdout.strip():
-            return ""
-        text = result.stdout.strip()
-        text = _strip_man_formatting(text)
-        match = re.search(
-            r"SYNOPSIS\s+(.+?)(?:\n\n|\n\s*\n)",
-            text,
-            re.DOTALL | re.IGNORECASE,
-        )
-        if match:
-            syn = match.group(1).strip()
-            syn = re.sub(r"\s+", " ", syn)
-            return syn[:300]
-    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
-        pass
+    text = _get_cached_man(name)
+    if not text:
+        return ""
+    match = re.search(
+        r"SYNOPSIS\s+(.+?)(?:\n\n|\n\s*\n)",
+        text,
+        re.DOTALL | re.IGNORECASE,
+    )
+    if match:
+        syn = match.group(1).strip()
+        syn = re.sub(r"\s+", " ", syn)
+        return syn[:300]
     return ""
 
 
 def get_options_via_man(name: str) -> list[dict[str, str]]:
-    try:
-        result = subprocess.run(
-            ["man", name],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
-            text=True,
-            timeout=5,
-        )
-        if result.returncode != 0 or not result.stdout.strip():
-            return []
-        text = result.stdout.strip()
-        text = _strip_man_formatting(text)
-        options: list[dict[str, str]] = []
-        in_options = False
-        lines = text.split("\n")
-        i = 0
-        while i < len(lines):
-            line = lines[i]
-            if re.match(r"^(OPTIONS|OPTION)", line, re.IGNORECASE):
-                in_options = True
-                i += 1
-                continue
-            if in_options and re.match(
-                r"^(ENVIRONMENT|FILES|EXAMPLES|SEE ALSO|BUGS|HISTORY|AUTHOR)",
-                line,
-                re.IGNORECASE,
-            ):
-                break
-            if in_options:
-                flag_match = re.match(r"^\s*(-[a-zA-Z0-9]|--[a-zA-Z0-9_-]+)", line)
-                if flag_match:
-                    flag = flag_match.group(1).strip()
-                    desc_parts: list[str] = []
-                    i += 1
-                    while (
-                        i < len(lines)
-                        and lines[i].strip()
-                        and not re.match(
-                            r"^\s*-[a-zA-Z0-9]|^\s*--[a-zA-Z0-9_-]", lines[i]
-                        )
-                    ):
-                        desc_parts.append(lines[i].strip())
-                        i += 1
-                    desc = " ".join(desc_parts).strip()[:200] if desc_parts else ""
-                    if flag and desc:
-                        options.append({"flag": flag, "description": desc})
-                    continue
-            i += 1
-        return options[:15]
-    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+    text = _get_cached_man(name)
+    if not text:
         return []
+    options: list[dict[str, str]] = []
+    in_options = False
+    lines = text.split("\n")
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        if re.match(r"^(OPTIONS|OPTION)", line, re.IGNORECASE):
+            in_options = True
+            i += 1
+            continue
+        if in_options and re.match(
+            r"^(ENVIRONMENT|FILES|EXAMPLES|SEE ALSO|BUGS|HISTORY|AUTHOR)",
+            line,
+            re.IGNORECASE,
+        ):
+            break
+        if in_options:
+            flag_match = re.match(r"^\s*(-[a-zA-Z0-9]|--[a-zA-Z0-9_-]+)", line)
+            if flag_match:
+                flag = flag_match.group(1).strip()
+                desc_parts: list[str] = []
+                i += 1
+                while (
+                    i < len(lines)
+                    and lines[i].strip()
+                    and not re.match(r"^\s*-[a-zA-Z0-9]|^\s*--[a-zA-Z0-9_-]", lines[i])
+                ):
+                    desc_parts.append(lines[i].strip())
+                    i += 1
+                desc = " ".join(desc_parts).strip()[:200] if desc_parts else ""
+                if flag and desc:
+                    options.append({"flag": flag, "description": desc})
+                continue
+        i += 1
+    return options[:15]
 
 
 def discover_command(name: str) -> CommandDict | None:
@@ -596,22 +594,37 @@ def discover_command(name: str) -> CommandDict | None:
 def discover_all(
     progress_callback: Any = None,
     max_commands: int = 500,
+    workers: int = 10,
 ) -> list[CommandDict]:
     all_commands = scan_system_commands()
-    logger.info("Starting discovery of %d commands", len(all_commands))
+    logger.info(
+        "Starting discovery of %d commands with %d workers",
+        len(all_commands),
+        workers,
+    )
     discovered: list[CommandDict] = []
     skipped = 0
-    for i, name in enumerate(all_commands):
-        if len(discovered) >= max_commands:
-            logger.info("Reached max_commands limit (%d)", max_commands)
-            break
-        if progress_callback:
-            progress_callback(i, len(all_commands), name)
-        cmd = discover_command(name)
-        if cmd:
-            discovered.append(cmd)
-        else:
-            skipped += 1
+    limit = min(max_commands, len(all_commands))
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        future_to_name = {
+            executor.submit(discover_command, name): name
+            for i, name in enumerate(all_commands[:limit])
+        }
+        completed = 0
+        for future in as_completed(future_to_name):
+            completed += 1
+            name = future_to_name[future]
+            if progress_callback:
+                progress_callback(completed, limit, name)
+            try:
+                cmd = future.result()
+                if cmd:
+                    discovered.append(cmd)
+                else:
+                    skipped += 1
+            except Exception as e:
+                logger.debug("Failed to discover '%s': %s", name, e)
+                skipped += 1
     logger.info(
         "Discovery complete: %d discovered, %d skipped",
         len(discovered),

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import builtins
+import types
 from typing import Any
 
 
@@ -41,7 +42,13 @@ class SandboxExecutor:
         restricted_builtins = dict(builtins.__dict__)
         restricted_builtins["__import__"] = self._restricted_import
         restricted_globals = {"__builtins__": restricted_builtins}
-        exec_globals: dict[str, Any] = {}
-        exec_globals.update(restricted_globals)
-        exec_globals.update(getattr(func, "__globals__", {}))
-        return func(*args, **kwargs)
+        restricted_globals.update(getattr(func, "__globals__", {}))
+
+        new_func = types.FunctionType(
+            func.__code__,
+            restricted_globals,
+            name=func.__name__,
+            argdefs=func.__defaults__,
+            closure=func.__closure__,
+        )
+        return new_func(*args, **kwargs)

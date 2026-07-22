@@ -210,6 +210,15 @@ class DaemonServer:
                 ],
             }
 
+        if req_type == "learn":
+            if not self._engine:
+                return {"status": "error", "message": "Engine not loaded"}
+            command = request.get("command", "")
+            if command:
+                self._engine.record_usage(command)
+                return {"status": "ok", "learned": command}
+            return {"status": "error", "message": "No command provided"}
+
         return {"status": "error", "message": f"Unknown type: {req_type}"}
 
 

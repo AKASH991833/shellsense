@@ -131,6 +131,41 @@ class KnowledgeEngine:
 
         return get_discovered_categories(self._db)
 
+    def learn_from_history(self, history_file: str | None = None) -> int:
+        if history_file is None:
+            import os
+
+            shell = os.environ.get("SHELL", "")
+            home = os.path.expanduser("~")
+            if "zsh" in shell:
+                history_file = os.path.join(home, ".zsh_history")
+            elif "fish" in shell:
+                history_file = os.path.join(home, ".local/share/fish/fish_history")
+            else:
+                history_file = os.path.join(home, ".bash_history")
+        try:
+            with open(history_file, errors="ignore") as f:
+                lines = f.readlines()
+        except OSError:
+            logger.warning("Cannot read history file: %s", history_file)
+            return 0
+        count = 0
+        from shellsense.knowledge.history import record_usage
+
+        for line in lines[-1000:]:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            if ":" in line and ";" in line:
+                parts = line.split(";", 1)
+                line = parts[-1].strip()
+            cmd = line.split()[0] if line.split() else ""
+            if cmd and not cmd.startswith("_"):
+                record_usage(self._db, cmd)
+                count += 1
+        logger.info("Learned %d commands from history", count)
+        return count
+
     @property
     def context(self) -> ContextEngine:
         return self._context

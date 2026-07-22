@@ -1,3 +1,5 @@
+import base64
+import hashlib
 import json
 import os
 from typing import Any
@@ -6,6 +8,71 @@ from shellsense.utils.logging import get_logger
 from shellsense.utils.paths import ensure_shellsense_dir, get_config_path
 
 logger = get_logger(__name__)
+
+_KEY_FILE = str(get_config_path().parent / ".keys")
+
+
+def _get_machine_key() -> bytes:
+    parts: list[str] = []
+    for path in ["/etc/machine-id", "/var/lib/dbus/machine-id"]:
+        try:
+            with open(path) as f:
+                parts.append(f.read().strip())
+        except OSError:
+            pass
+    try:
+        parts.append(os.uname().nodename)
+    except AttributeError:
+        parts.append("shellsense-default")
+    raw = ".".join(parts)
+    return hashlib.pbkdf2_hmac("sha256", raw.encode(), b"shellsense-key-v1", 100000, 32)
+
+
+def _xor_encrypt(data: bytes, key: bytes) -> bytes:
+    return bytes(a ^ b for a, b in zip(data, key * (len(data) // len(key) + 1)))
+
+
+def encrypt_api_key(api_key: str) -> str:
+    key = _get_machine_key()
+    encrypted = _xor_encrypt(api_key.encode(), key)
+    encoded = base64.b64encode(encrypted).decode()
+    keys = _load_key_file()
+    keys["ai.api_key"] = encoded
+    _save_key_file(keys)
+    return encoded
+
+
+def decrypt_api_key(encoded: str | None = None) -> str:
+    if encoded is None:
+        keys = _load_key_file()
+        encoded = keys.get("ai.api_key", "")
+    if not encoded:
+        return ""
+    try:
+        key = _get_machine_key()
+        encrypted = base64.b64decode(encoded.encode())
+        decrypted = _xor_encrypt(encrypted, key)
+        return decrypted.decode()
+    except Exception:
+        return ""
+
+
+def _load_key_file() -> dict[str, str]:
+    try:
+        if os.path.isfile(_KEY_FILE):
+            with open(_KEY_FILE) as f:
+                data: dict[str, str] = json.load(f)
+                return data
+    except Exception:
+        pass
+    return {}
+
+
+def _save_key_file(keys: dict[str, str]) -> None:
+    ensure_shellsense_dir()
+    with open(_KEY_FILE, "w") as f:
+        json.dump(keys, f, indent=2)
+    os.chmod(_KEY_FILE, 0o600)
 
 
 DEFAULT_CONFIG: dict[str, Any] = {

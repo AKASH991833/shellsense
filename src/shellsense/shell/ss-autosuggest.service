@@ -1,0 +1,15 @@
+[Unit]
+Description=ShellSense AI Daemon
+Documentation=https://github.com/AKASH991833/shellsense
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/ss daemon start --foreground
+Restart=on-failure
+RestartSec=5
+Environment=SS_DAEMON=1
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+
+[Install]
+WantedBy=default.target

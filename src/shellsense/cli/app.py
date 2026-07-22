@@ -37,6 +37,7 @@ from shellsense.cli.commands.daemon_cmd import (
     daemon_suggest_callback,
 )
 from shellsense.cli.commands.discover_cmd import discover_callback
+from shellsense.cli.commands.init_cmd import init_callback
 from shellsense.cli.commands.category_cmd import (
     category_list_callback,
     category_show_callback,
@@ -210,6 +211,16 @@ def doctor() -> None:
     doctor_callback()
 
 
+@app.command(name="init")
+def init_command(
+    yes: bool = typer.Option(False, "--yes", "-y", help="Auto-yes to all prompts"),
+    discover: bool = typer.Option(True, "--discover/--no-discover"),
+    max_commands: int = typer.Option(200, "--max", "-m"),
+) -> None:
+    """One-command setup: daemon, discovery, shell integration, systemd."""
+    init_callback(auto_yes=yes, discover=discover, max_commands=max_commands)
+
+
 backup_app = typer.Typer(
     name="backup",
     help="Backup and restore ShellSense AI data",
@@ -312,9 +323,10 @@ def daemon_suggest(
 def search(
     query: str = typer.Argument(..., help="Search query for commands"),
     limit: int = typer.Option(20, "--limit", "-l", help="Maximum results"),
+    fzf: bool = typer.Option(False, "--fzf", help="Use fzf interactive selector"),
 ) -> None:
     """Search for commands in the knowledge base."""
-    search_callback(query, limit=limit)
+    search_callback(query, limit=limit, fzf=fzf)
 
 
 @app.command(name="explain")

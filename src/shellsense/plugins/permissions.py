@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import json
 import os
+from pathlib import Path
 from typing import Any
 
 from shellsense.utils.logging import get_logger
-from shellsense.utils.paths import get_plugins_dir
+from shellsense.utils.paths import get_plugins_dir, get_shellsense_dir
 
 logger = get_logger(__name__)
 
@@ -25,6 +26,23 @@ PERMISSION_GROUPS: dict[str, str] = {
     "process.list": "List running processes",
     "package.manage": "Access package managers",
 }
+
+_ALLOWED_BASE = Path(get_shellsense_dir())
+
+
+def is_path_allowed(requested_path: str) -> bool:
+    resolved = Path(requested_path).resolve()
+    return _ALLOWED_BASE in resolved.parents or resolved == _ALLOWED_BASE
+
+
+def sanitize_path(requested_path: str) -> str:
+    resolved = Path(requested_path).resolve()
+    if not is_path_allowed(str(resolved)):
+        raise PermissionError(
+            f"Path '{requested_path}' is outside ShellSense directory "
+            f"({_ALLOWED_BASE})"
+        )
+    return str(resolved)
 
 
 class PermissionManager:

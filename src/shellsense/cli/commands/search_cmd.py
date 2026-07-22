@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import shutil
+import subprocess
+import tempfile
+
 from rich.console import Console
 from rich.table import Table
 
@@ -16,6 +20,7 @@ def search_callback(
     query: str,
     limit: int = 20,
     fuzzy: bool = True,
+    fzf: bool = False,
 ) -> None:
     db = DatabaseManager()
     engine = KnowledgeEngine(db)
@@ -37,6 +42,11 @@ def search_callback(
                 )
         else:
             console.print(f"[yellow]No commands found matching[/] [bold]'{query}'[/]")
+        db.close()
+        return
+
+    if fzf and shutil.which("fzf"):
+        _show_fzf(results, query)
         db.close()
         return
 
@@ -68,3 +78,35 @@ def search_callback(
     console.print(table)
     console.print(f"\n[dim]{len(results)} result(s)[/]")
     db.close()
+
+
+def _show_fzf(results: list[dict[str, object]], query: str) -> None:
+    lines = []
+    for r in results:
+        name = r.get("name", "")
+        desc = r.get("short_description", "")
+        cat = r.get("category", "")
+        lines.append(f"{name} │ {desc} │ {cat}")
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+        f.write("\n".join(lines))
+        tmpfile = f.name
+    try:
+        proc = subprocess.run(
+            ["fzf", f"--query={query}", "--header=Select a command for details"],
+            stdin=open(tmpfile),
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if proc.returncode == 0 and proc.stdout.strip():
+            selected = proc.stdout.strip().split(" │ ")[0]
+            console.print(f"[green]Selected:[/] [bold cyan]{selected}[/]")
+            import shellsense.cli.commands.explain_cmd as ec
+
+            ec.explain_callback(selected)
+    except Exception:
+        pass
+    finally:
+        import os
+
+        os.unlink(tmpfile)
