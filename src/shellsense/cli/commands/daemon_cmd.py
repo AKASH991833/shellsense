@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import os
+import shutil
 import signal
+import subprocess
 import sys
 import time
-from typing import Any
+from pathlib import Path
 
 import typer
 from rich.console import Console
@@ -18,12 +20,15 @@ logger = get_logger(__name__)
 console = Console()
 
 
+def _get_cli() -> str:
+    return shutil.which("shellsense") or shutil.which("shs") or "shellsense"
+
+
 def daemon_start_callback(
     foreground: bool = typer.Option(
         False, "--foreground", "-f", help="Run in foreground"
     ),
 ) -> None:
-    """Start the ShellSense daemon."""
     if is_running():
         pid = get_daemon_pid()
         console.print(f"[yellow]Daemon already running (PID: {pid})[/]")
@@ -48,7 +53,7 @@ def daemon_start_callback(
         if is_running():
             client = DaemonClient()
             stats = client.stats()
-            if stats.get("status") == "ok":
+            if stats.get("success"):
                 counts = stats.get("counts", {})
                 console.print(
                     f"  Commands: {counts.get('total', '?')} "
@@ -71,14 +76,13 @@ def daemon_start_callback(
 
 
 def daemon_stop_callback() -> None:
-    """Stop the ShellSense daemon."""
     if not is_running():
         console.print("[yellow]Daemon is not running[/]")
         return
 
     client = DaemonClient()
     resp = client.shutdown()
-    if resp.get("status") == "shutting_down":
+    if resp.get("success"):
         time.sleep(1)
         if os.path.exists(PID_PATH):
             os.unlink(PID_PATH)
@@ -101,10 +105,9 @@ def daemon_stop_callback() -> None:
 
 
 def daemon_status_callback() -> None:
-    """Show daemon status."""
     if not is_running():
         console.print("[yellow]Daemon is not running[/]")
-        console.print("Run [bold cyan]ss daemon start[/] to start it")
+        console.print(f"Run [bold cyan]{_get_cli()} daemon start[/] to start it")
         return
 
     client = DaemonClient()
@@ -124,7 +127,7 @@ def daemon_status_callback() -> None:
         table.add_row("Uptime", f"{mins}m {secs}s")
     table.add_row("Socket", str(status.get("socket", SOCKET_PATH)))
 
-    if stats.get("status") == "ok":
+    if stats.get("success"):
         counts = stats.get("counts", {})
         table.add_row("Total Commands", str(counts.get("total", 0)))
         table.add_row("Seeded", str(counts.get("seeded", 0)))
@@ -134,7 +137,6 @@ def daemon_status_callback() -> None:
 
 
 def daemon_restart_callback() -> None:
-    """Restart the ShellSense daemon."""
     daemon_stop_callback()
     time.sleep(1)
     daemon_start_callback()
@@ -143,11 +145,10 @@ def daemon_restart_callback() -> None:
 def daemon_suggest_callback(
     partial: str = typer.Argument(..., help="Partial command to get suggestion for"),
 ) -> None:
-    """Get auto-suggestion for a partial command."""
     client = DaemonClient()
     resp = client.suggest(partial)
-    if resp.get("status") != "ok":
-        console.print(f"[red]Error: {resp.get('message', 'Unknown error')}[/]")
+    if not resp.get("success"):
+        console.print(f"[red]Error: {resp.get('error', 'Unknown error')}[/]")
         return
 
     prediction = resp.get("prediction", "")
@@ -159,13 +160,17 @@ def daemon_suggest_callback(
     suggestions = resp.get("suggestions", [])
     if len(suggestions) > 1:
         table = Table(highlight=True)
-        table.add_column("Name", style="cyan")
+        table.add_column("Suggestion", style="cyan")
+        table.add_column("Score", style="green")
         table.add_column("Description", style="white")
         table.add_column("Category", style="yellow")
         for s in suggestions[:5]:
+            score = s.get("score", 0)
+            score_str = f"{score:.0%}" if isinstance(score, float) else str(score)
             table.add_row(
-                str(s.get("name", "")),
-                str(s.get("description", ""))[:50],
+                str(s.get("text", "")),
+                score_str,
+                str(s.get("description", ""))[:60],
                 str(s.get("category", "")),
             )
         console.print(table)

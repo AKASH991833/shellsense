@@ -93,7 +93,7 @@ def check_configuration() -> CheckResult:
             "name": "Configuration",
             "status": "failed",
             "detail": str(e),
-            "fix": "Run 'ss config reset' to reset configuration",
+            "fix": "Run 'shellsense config reset' to reset configuration",
         }
 
 
@@ -108,7 +108,7 @@ def check_database() -> CheckResult:
             "name": "Database",
             "status": "passed" if seeded else "warning",
             "detail": f"DB: {db_path} (seeded: {seeded})",
-            "fix": None if seeded else "Run 'ss search' to seed the database",
+            "fix": None if seeded else "Run 'shellsense search' to seed the database",
         }
     except Exception as e:
         return {
@@ -127,27 +127,31 @@ def check_shell_integration() -> CheckResult:
             "name": "Shell Integration",
             "status": "passed" if integrated else "warning",
             "detail": f"Shell: {shell} (integrated: {integrated})",
-            "fix": None if integrated else "Run 'ss install' to integrate",
+            "fix": None if integrated else "Run 'shellsense install' to integrate",
         }
     except Exception as e:
         return {
             "name": "Shell Integration",
             "status": "failed",
             "detail": str(e),
-            "fix": "Run 'ss install' to install shell integration",
+            "fix": "Run 'shellsense install' to install shell integration",
         }
 
 
 def check_completion_scripts() -> CheckResult:
     completion_dir = Path.home() / ".shellsense"
     found = (
-        list(completion_dir.glob("ss-completion.*")) if completion_dir.exists() else []
+        list(completion_dir.glob("shellsense-completion.*"))
+        if completion_dir.exists()
+        else []
     )
     return {
         "name": "Completion Scripts",
         "status": "passed" if found else "warning",
         "detail": f"{len(found)} script(s) found" if found else "No completion scripts",
-        "fix": None if found else "Run 'ss install' to generate completion scripts",
+        "fix": (
+            None if found else "Run 'shellsense install' to generate completion scripts"
+        ),
     }
 
 
@@ -173,7 +177,7 @@ def check_permissions() -> CheckResult:
 
 def check_dependencies() -> CheckResult:
     missing: list[str] = []
-    for dep in ["python3", "ss"]:
+    for dep in ["python3", "shellsense"]:
         if not shutil.which(dep):
             missing.append(dep)
     return {

@@ -16,7 +16,7 @@ class DaemonClient:
 
     def send_request(self, request: dict[str, Any]) -> dict[str, Any]:
         if not os.path.exists(self._socket_path):
-            return {"status": "error", "message": "Daemon not running"}
+            return {"success": False, "error": "Daemon not running"}
         try:
             sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             sock.settimeout(TIMEOUT)
@@ -24,14 +24,18 @@ class DaemonClient:
             sock.sendall(json.dumps(request).encode("utf-8"))
             data = sock.recv(65536)
             sock.close()
+            if not data:
+                return {"success": False, "error": "Empty response from daemon"}
             result: dict[str, Any] = json.loads(data.decode("utf-8"))
             return result
         except socket.timeout:
-            return {"status": "error", "message": "Daemon timed out"}
+            return {"success": False, "error": "Daemon timed out"}
         except ConnectionRefusedError:
-            return {"status": "error", "message": "Daemon not running"}
+            return {"success": False, "error": "Daemon not running"}
+        except json.JSONDecodeError:
+            return {"success": False, "error": "Invalid JSON from daemon"}
         except Exception as e:
-            return {"status": "error", "message": str(e)}
+            return {"success": False, "error": str(e)}
 
     def ping(self) -> dict[str, Any]:
         return self.send_request({"type": "ping"})
@@ -60,7 +64,7 @@ class DaemonClient:
 
     def get_prediction(self, partial: str) -> str:
         resp = self.suggest(partial, limit=1)
-        if resp.get("status") == "ok" and resp.get("prediction"):
+        if resp.get("success") and resp.get("prediction"):
             prediction = str(resp["prediction"])
             if prediction.lower().startswith(partial.lower()):
                 return prediction

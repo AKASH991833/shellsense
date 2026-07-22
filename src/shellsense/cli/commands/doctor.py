@@ -122,8 +122,10 @@ def _check_installation(checks: list[tuple[str, bool | str, str]]) -> None:
     checks.append(("Database file", db_path.exists(), str(db_path)))
     checks.append(("Log file", log_path.exists(), str(log_path)))
 
-    cli_available = shutil.which("ss") is not None or _is_package_installed(
-        "shellsense"
+    cli_available = (
+        shutil.which("shellsense") is not None
+        or shutil.which("shs") is not None
+        or _is_package_installed("shellsense")
     )
     checks.append(
         (
@@ -180,7 +182,7 @@ def _check_database(checks: list[tuple[str, bool | str, str]]) -> None:
                 (
                     "Database seeded",
                     seeded,
-                    "yes" if seeded else "Run 'ss search' to seed",
+                    "yes" if seeded else "Run 'shellsense search' to seed",
                 )
             )
         except Exception as e:
@@ -360,7 +362,7 @@ def _check_daemon(checks: list[tuple[str, bool | str, str]]) -> None:
             (
                 "Daemon",
                 "STOPPED",
-                "Not running. Start with: ss daemon start",
+                "Not running. Start with: shellsense daemon start",
             )
         )
 

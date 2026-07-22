@@ -47,4 +47,14 @@ def ensure_shellsense_dir() -> Path:
     config_path = get_config_path()
     if config_path.exists():
         config_path.chmod(0o600)
+    subdirs = [
+        "cache",
+        "cache/marketplace",
+        "cache/ai_cache",
+        "plugins",
+        "conversations",
+        "logs",
+    ]
+    for sub in subdirs:
+        (path / sub).mkdir(parents=True, exist_ok=True, mode=0o700)
     return path

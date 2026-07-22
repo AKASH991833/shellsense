@@ -51,16 +51,16 @@ def init_callback(
     if is_running():
         _ok("Daemon already running")
     else:
-        _run_cmd("ss daemon start", "Daemon started")
+        _run_cmd("shellsense daemon start", "Daemon started")
 
     time.sleep(1)
 
     if discover:
         _step(f"Discovering commands (max {max_commands})...")
-        _run_cmd(f"ss discover scan --max {max_commands}", "Discovery complete")
+        _run_cmd(f"shellsense discover scan --max {max_commands}", "Discovery complete")
 
     _step("Installing shell integration...")
-    _run_cmd("ss install", "Shell hooks installed")
+    _run_cmd("shellsense install", "Shell hooks installed")
 
     _step("Systemd service...")
     _setup_systemd(auto_yes)
@@ -68,10 +68,12 @@ def init_callback(
     console.print(
         Panel(
             "[bold green]ShellSense AI is ready![/]\n"
-            "  • Daemon:    [cyan]ss daemon status[/]\n"
-            "  • Search:    [cyan]ss search find large files[/]\n"
-            "  • Suggest:   [cyan]ss suggest 'git com'[/]\n"
-            "  • Doctor:    [cyan]ss doctor[/]\n"
+            "  • Daemon:    [cyan]shellsense daemon status[/]\n"
+            "  • Search:    [cyan]shellsense search find large files[/]\n"
+            "  • Suggest:   [cyan]shellsense suggest 'git com'[/]\n"
+            "  • Doctor:    [cyan]shellsense doctor[/]\n"
+            "\n"
+            "Also available as: [bold]shs[/] (alias)\n"
             "\n"
             "Restart your terminal or run: [bold]exec bash[/]",
         )
@@ -99,7 +101,11 @@ def _setup_systemd(auto_yes: bool) -> None:
     service_name = "shellsense-daemon"
     user_services = Path.home() / ".config" / "systemd" / "user"
     service_path = user_services / f"{service_name}.service"
-    bin_path = shutil.which("ss") or Path.home() / ".local/bin/ss"
+    bin_path = (
+        shutil.which("shellsense")
+        or shutil.which("shs")
+        or Path.home() / ".local/bin/shellsense"
+    )
     service_content = f"""[Unit]
 Description=ShellSense AI Daemon
 After=network.target

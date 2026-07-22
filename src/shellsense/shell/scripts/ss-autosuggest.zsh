@@ -102,6 +102,6 @@ __shellsense_precmd_suggest() {
 precmd_functions+=(__shellsense_precmd_suggest)
 
 # Tab completion integration
-if type ss &>/dev/null; then
-    eval "$(ss show-completion zsh 2>/dev/null)"
+if type shellsense &>/dev/null; then
+    eval "$(shellsense show-completion zsh 2>/dev/null)"
 fi

@@ -11,7 +11,7 @@ from shellsense.shell.detect import (
     get_shell_config_path,
     is_os_supported,
 )
-from shellsense.shell.hooks import get_hook_script
+from shellsense.shell.hooks import get_hooks
 from shellsense.utils.logging import get_logger
 from shellsense.utils.paths import ensure_shellsense_dir
 
@@ -24,16 +24,18 @@ _INTEGRATION_MARKER_END = "# --- ShellSense AI integration end ---"
 
 def _install_autosuggest_scripts(shell: str) -> None:
     shellsense_dir = ensure_shellsense_dir()
-    script_src = Path(__file__).parent / "scripts" / f"ss-autosuggest.{shell}"
+    script_src = Path(__file__).parent / "scripts" / f"shellsense-autosuggest.{shell}"
     if not script_src.exists():
-        return
-    script_dst = shellsense_dir / f"ss-autosuggest.{shell}"
+        script_src = Path(__file__).parent / "scripts" / f"ss-autosuggest.{shell}"
+        if not script_src.exists():
+            return
+    script_dst = shellsense_dir / f"shellsense-autosuggest.{shell}"
     shutil.copy2(str(script_src), str(script_dst))
     logger.info("Installed autosuggest script: %s", script_dst)
 
 
 def _get_integration_block(shell: str) -> str:
-    hooks = get_hook_script(shell)
+    hooks = get_hooks(shell)
     lines = [
         _INTEGRATION_MARKER_START,
         "# ShellSense AI - Shell Integration",
@@ -42,18 +44,20 @@ def _get_integration_block(shell: str) -> str:
         "# Source ShellSense completion",
     ]
     if shell == "bash":
-        completion_path = Path.home() / ".shellsense" / "ss-completion.bash"
+        completion_path = Path.home() / ".shellsense" / "shellsense-completion.bash"
         lines.append(f"source {completion_path}")
     elif shell == "zsh":
-        completion_path = Path.home() / ".shellsense" / "ss-completion.zsh"
+        completion_path = Path.home() / ".shellsense" / "shellsense-completion.zsh"
         lines.append(f"source {completion_path}")
     elif shell == "fish":
-        completion_path = Path.home() / ".shellsense" / "ss-completion.fish"
+        completion_path = Path.home() / ".shellsense" / "shellsense-completion.fish"
         lines.append(f"source {completion_path}")
 
     lines.append("")
-    lines.append("# ShellSense autosuggest")
-    autosuggest_path = Path.home() / ".shellsense" / f"ss-autosuggest.{shell}"
+    lines.append("# Source ShellSense autosuggest")
+    autosuggest_path = Path.home() / ".shellsense" / f"shellsense-autosuggest.{shell}"
+    if not autosuggest_path.exists():
+        autosuggest_path = Path.home() / ".shellsense" / f"ss-autosuggest.{shell}"
     if autosuggest_path.exists():
         lines.append(f"source {autosuggest_path}")
 
@@ -134,14 +138,16 @@ def uninstall_shell_integration(
 
     completion_dir = Path.home() / ".shellsense"
     for ext in [".bash", ".zsh", ".fish"]:
-        comp_file = completion_dir / f"ss-completion{ext}"
-        if comp_file.exists():
-            comp_file.unlink()
-            logger.info("Removed completion script: %s", comp_file)
-        autosuggest_file = completion_dir / f"ss-autosuggest{ext}"
-        if autosuggest_file.exists():
-            autosuggest_file.unlink()
-            logger.info("Removed autosuggest script: %s", autosuggest_file)
+        for name in [f"shellsense-completion{ext}", f"ss-completion{ext}"]:
+            comp_file = completion_dir / name
+            if comp_file.exists():
+                comp_file.unlink()
+                logger.info("Removed completion script: %s", comp_file)
+        for name in [f"shellsense-autosuggest{ext}", f"ss-autosuggest{ext}"]:
+            autosuggest_file = completion_dir / name
+            if autosuggest_file.exists():
+                autosuggest_file.unlink()
+                logger.info("Removed autosuggest script: %s", autosuggest_file)
 
     if restore_backup:
         backup_path = get_backup_path(config_path)

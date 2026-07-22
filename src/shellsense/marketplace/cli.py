@@ -182,7 +182,9 @@ def marketplace_update_callback(
             console.print("[bold]Installed Marketplace Plugins:[/]")
             for p in installed:
                 console.print(f"  {p['id']}: v{p['version']}")
-            console.print("\nUse 'ss marketplace update --all' to check for updates.")
+            console.print(
+                "\nUse 'shellsense marketplace update --all' to check for updates."
+            )
 
 
 def marketplace_sync_callback(repo_name: str | None = None) -> None:
@@ -315,7 +317,7 @@ def marketplace_list_callback(category: str = "") -> None:
     console.print(table)
 
     console.print(f"\nTotal: {len(installed)} plugin(s) installed")
-    console.print("Use 'ss marketplace update --all' to check for updates")
+    console.print("Use 'shellsense marketplace update --all' to check for updates")
 
 
 def marketplace_doctor_callback() -> None:

@@ -155,7 +155,7 @@ def plugin_install_callback(path: str) -> None:
                 console.print("[green]Permissions granted.[/]")
             else:
                 console.print(
-                    "[yellow]Permissions not granted. Use 'ss plugin permissions' to manage.[/]"
+                    "[yellow]Permissions not granted. Use 'shellsense plugin permissions' to manage.[/]"
                 )
     except (PluginError, FileExistsError) as e:
         console.print(f"[red]{e}[/]")

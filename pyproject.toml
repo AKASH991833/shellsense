@@ -70,7 +70,8 @@ Changelog = "https://github.com/shellsense-ai/shellsense/blob/main/CHANGELOG.md"
 Security = "https://github.com/shellsense-ai/shellsense/security/policy"
 
 [project.scripts]
-ss = "shellsense.cli.app:app"
+shellsense = "shellsense.cli.app:app"
+shs = "shellsense.cli.app:app"
 
 [tool.setuptools.packages.find]
 where = ["src"]

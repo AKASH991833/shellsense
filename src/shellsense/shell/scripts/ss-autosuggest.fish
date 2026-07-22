@@ -59,6 +59,6 @@ bind \ce accept-autosuggestion
 bind \cf accept-autosuggestion
 
 # Tab completion
-if type -q ss
-    ss show-completion fish 2>/dev/null | source
+if type -q shellsense
+    shellsense show-completion fish 2>/dev/null | source
 end

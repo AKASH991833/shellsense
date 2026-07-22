@@ -78,6 +78,6 @@ else
 fi
 
 # Also enable tab-completion integration
-if type ss &>/dev/null; then
-    eval "$(ss show-completion bash 2>/dev/null)"
+if type shellsense &>/dev/null; then
+    eval "$(shellsense show-completion bash 2>/dev/null)"
 fi

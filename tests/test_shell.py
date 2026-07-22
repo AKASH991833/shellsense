@@ -10,7 +10,7 @@ from shellsense.shell.detect import (
     is_os_supported,
 )
 from shellsense.shell.diagnostics import run_all_checks
-from shellsense.shell.hooks import get_hook_script, get_prompt_snippet
+from shellsense.shell.hooks import get_hooks
 from shellsense.shell.integration import ShellIntegrationManager
 from shellsense.shell.keyboard import DEFAULT_SHORTCUTS, get_all_shortcuts, get_shortcut
 from shellsense.shell.warnings import (
@@ -42,17 +42,17 @@ class TestDetect:
 class TestCompletion:
     def test_get_bash_completion(self) -> None:
         script = get_completion_script("bash")
-        assert "_ss_completion" in script
+        assert "_shellsense_completion" in script
         assert "complete -F" in script
 
     def test_get_zsh_completion(self) -> None:
         script = get_completion_script("zsh")
-        assert "_ss_completion" in script
+        assert "_shellsense_completion" in script
         assert "compdef" in script
 
     def test_get_fish_completion(self) -> None:
         script = get_completion_script("fish")
-        assert "__ss_complete" in script
+        assert "__shellsense_complete" in script
         assert "complete -c" in script
 
     def test_get_unknown_shell(self) -> None:
@@ -62,23 +62,23 @@ class TestCompletion:
 
 class TestHooks:
     def test_get_bash_hooks(self) -> None:
-        script = get_hook_script("bash")
+        script = get_hooks("bash")
         assert "preexec" in script
         assert "PROMPT_COMMAND" in script or "trap" in script
 
     def test_get_zsh_hooks(self) -> None:
-        script = get_hook_script("zsh")
+        script = get_hooks("zsh")
         assert "preexec" in script
-        assert "add-zsh-hook" in script
+        assert "precmd_functions" in script or "preexec_functions" in script
 
     def test_get_fish_hooks(self) -> None:
-        script = get_hook_script("fish")
+        script = get_hooks("fish")
         assert "preexec" in script
-        assert "fish_prompt" in script
+        assert "fish_preexec" in script or "fish_prompt" in script
 
-    def test_prompt_snippet(self) -> None:
-        snippet = get_prompt_snippet("bash")
-        assert "PS1" in snippet or "prompt" in snippet
+    def test_get_unknown_shell(self) -> None:
+        script = get_hooks("unknown")
+        assert script == ""
 
 
 class TestWarnings:

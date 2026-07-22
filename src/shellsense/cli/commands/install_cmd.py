@@ -77,7 +77,7 @@ def doctor_callback() -> None:
         console.print("[bold green]All checks passed![/]")
     else:
         console.print(
-            "[yellow]Some checks require attention. Run [bold]ss repair[/] to attempt fixes.[/]"
+            "[yellow]Some checks require attention. Run [bold]shellsense repair[/] to attempt fixes.[/]"
         )
 
 

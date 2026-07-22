@@ -1,217 +1,135 @@
 # ShellSense AI
 
-> **Think Less. Command More.**
+**Think Less. Command More. — Intelligent Linux Terminal Assistant**
 
-ShellSense AI is an intelligent Linux terminal assistant that helps users work more efficiently inside the terminal. It provides command suggestions, spelling correction, command explanations, Linux learning, error analysis, AI-powered assistance, automation generation, plugin SDK, and marketplace.
-
----
+ShellSense brings Fish-like autosuggestions, context-aware command prediction, and workflow automation to any Linux terminal (Bash, Zsh, Fish). It runs as a background daemon, learns your usage patterns, and suggests the right command before you finish typing.
 
 ## Features
 
-- **Command Suggestions** — Get intelligent command suggestions as you type
-- **Search & Discovery** — Search commands, categories, related commands
-- **Spelling Correction** — Automatically fix typos in commands
-- **Command Explanations** — Understand what a command does before running it
-- **Linux Learning** — Learn Linux concepts interactively
-- **Error Analysis** — Get explanations and fixes for command errors
-- **AI Assistance** — Natural language to command translation
-- **Terminal Intelligence** — Context-aware prompts, privacy controls
-- **Automation Generation** — Generate bash, systemd, docker, cron, and more
-- **Plugin SDK** — Extend ShellSense with custom plugins
-- **Plugin Marketplace** — Discover and install community plugins
-- **Enterprise Policies** — Compliance, audit logging, approved/blocked lists
-- **Backup & Recovery** — Backup and restore config, database, plugins
-- **Shell Integration** — Seamless integration with your shell
+- **Live inline suggestions** — ghost text appears as you type (like Fish shell)
+- **Fuzzy matching** — `gti pus` → `git push`, `chmo` → `chmod`, `systemct` → `systemctl`
+- **History-aware** — learns your frequently used commands and prioritizes them
+- **Context-aware** — detects git repos, Dockerfiles, Python venvs, kubectl contexts, terraform projects
+- **Workflow automation** — `kubectl get pods` → suggests `kubectl logs -f`, `git add` → suggests `git commit`
+- **Command discovery** — automatically indexes all 2000+ commands on your system
+- **Background daemon** — persistent Unix socket server for sub-30ms responses
+- **Multi-shell support** — Bash, Zsh, Fish with native integration
+- **Zero-latency** — in-memory cache, parallel discovery, optimized SQLite
 
----
-
-## Installation
-
-### Prerequisites
-
-- **Python 3.12+**
-- **Linux** (Ubuntu, Debian, Fedora, Arch, openSUSE, and more)
-- **pip**
-
-### Quick Install
+## Quick Start
 
 ```bash
-git clone https://github.com/shellsense-ai/shellsense.git
-cd shellsense-ai
-pip install -e .
+# Install
+pip install git+https://github.com/AKASH991833/shellsense.git
+
+# One-command setup (daemon + discovery + shell hooks)
+shellsense init
+
+# Or manually:
+shellsense daemon start
+shellsense discover scan
+shellsense install
+
+# Reload your shell
+exec bash
 ```
-
-### Using Docker
-
-```bash
-docker build -t shellsense .
-docker run --rm shellsense --help
-```
-
-### Verify Installation
-
-```bash
-ss --version
-ss doctor
-```
-
----
 
 ## Usage
 
+### Live suggestions (inline, while typing)
+
+| Typing | Suggestion |
+|--------|------------|
+| `git pu` | `git push origin main` |
+| `sudo sys` | `sudo systemctl` |
+| `dock` | `docker` |
+| `kubectl get po` | `kubectl get pods` |
+| `chmo` | `chmod` |
+| `python3 -m` | `python3 -m venv` |
+
+Press `Ctrl-E` or `Ctrl-F` to accept the suggestion.
+
+### Commands
+
 ```bash
-# Show help
-ss --help
-
-# Show version
-ss --version
-
-# Show system information
-ss info
-
-# Run diagnostics
-ss doctor
-
-# Manage configuration
-ss config show
-ss config get general.theme
-ss config set general.theme dark
-ss config reset
-ss config path
-
-# Backup and restore
-ss backup create                          # Full backup
-ss backup create --item config            # Backup config only
-ss backup list                            # List backups
-ss backup restore <backup_name>           # Restore from backup
+# Command suggestions
+shellsense suggest "git com"
 
 # Search commands
-ss search find file by name
-ss explain tar
-ss examples grep
+shellsense search "find large files"
 
-# AI assistance (requires AI provider)
-ss ask "how to compress a directory"
-ss fix "error: command not found"
+# Explain a command
+shellsense explain "git rebase -i HEAD~3"
 
-# Automation generation
-ss generate bash.backup-script --output ./scripts
-ss generate systemd.service --name myapp
-ss template list
+# Check command safety
+shellsense check "rm -rf /"
 
-# Plugin management
-ss plugin list
-ss plugin install /path/to/plugin
-ss plugin create my-plugin
+# Daemon management
+shellsense daemon status
+shellsense daemon restart
 
-# Marketplace
-ss marketplace search docker
-ss marketplace install docker-helper
-ss marketplace verify docker-helper
+# System diagnostics
+shellsense doctor
 
-# Privacy controls
-ss privacy show
-ss privacy deny share_git_info
+# Repair installation
+shellsense repair
+
+# Get AI assistance (if API key configured)
+shellsense ai chat "How do I grep for multiple patterns?"
 ```
 
----
+You can also use the alias: `shs` instead of `shellsense`.
 
-## Configuration
+### Daemon
 
-Configuration is stored at `~/.shellsense/config.json`. You can manage it via:
+The daemon runs as a background Unix socket server:
 
 ```bash
-ss config show      # View all settings
-ss config get <key> # Get a specific value
-ss config set <key> <value>  # Set a value
-ss config reset     # Restore defaults
-ss config path      # Show config file location
+shellsense daemon start     # Fork to background
+shellsense daemon status    # Show PID, uptime, stats
+shellsense daemon stop      # Graceful shutdown
+shellsense daemon suggest "git com"   # Quick suggestion
 ```
 
----
+Auto-start on login with systemd:
+
+```bash
+systemctl --user enable shellsense-daemon
+```
+
+## Architecture
+
+```
+~/.shellsense/
+├── config.json          # Configuration
+├── shellsense.db        # SQLite database (commands, history, discovered)
+├── cache/               # Suggestion cache, marketplace, AI cache
+├── plugins/             # Loadable plugins
+├── conversations/       # AI chat history
+└── logs/                # Daemon logs
+
+/tmp/shellsense-daemon.sock  # Unix socket
+/tmp/shellsense-daemon.pid   # PID file
+```
+
+## Requirements
+
+- Python 3.12+
+- Linux (Bash, Zsh, or Fish)
+- Recommended: `rapidfuzz` (for fuzzy matching), `rich` (for CLI output)
 
 ## Development
 
-### Setup
-
 ```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements-dev.txt
-pip install -e .
+git clone https://github.com/AKASH991833/shellsense.git
+cd shellsense
+pip install -e ".[dev]"
+pytest
+black src/shellsense/ tests/
+ruff src/shellsense/
+mypy src/shellsense/
 ```
-
-### Code Quality
-
-```bash
-make lint     # Run ruff and mypy
-make format   # Run black
-make typecheck  # Run mypy
-```
-
-### Testing
-
-```bash
-make test     # Run pytest
-make coverage # Run with coverage
-```
-
----
-
-## Project Structure
-
-```
-shellsense-ai/
-├── src/
-│   └── shellsense/
-│       ├── cli/             # CLI commands and Typer app
-│       ├── ai/              # AI abstraction layer and providers
-│       ├── automation/      # Automation & infrastructure generation
-│       ├── core/            # Core exceptions and base classes
-│       ├── database/        # SQLite database management
-│       ├── intelligence/    # Terminal intelligence layer
-│       ├── knowledge/       # Command knowledge engine
-│       ├── marketplace/     # Plugin marketplace & enterprise
-│       ├── plugins/         # Plugin SDK & extension framework
-│       ├── shell/           # Live shell integration
-│       └── utils/           # Configuration, logging, i18n, platform
-├── tests/                   # Comprehensive test suite
-├── docs/                    # Documentation
-├── installer/               # Installation scripts
-├── scripts/                 # Development and build scripts
-├── resources/               # Static resources
-├── examples/                # Usage examples
-├── Dockerfile               # Container image
-├── SECURITY.md              # Security policy
-├── CHANGELOG.md             # Release history
-└── pyproject.toml           # Project metadata
-```
-
----
-
-## Roadmap
-
-- **Phase 1** — Project foundation
-- **Phase 2** — Command knowledge engine
-- **Phase 3** — Intelligent suggestion engine
-- **Phase 4** — Live shell integration
-- **Phase 5** — AI abstraction layer
-- **Phase 6** — Terminal intelligence layer
-- **Phase 7** — Automation & infrastructure generator
-- **Phase 8** — Plugin SDK & extension framework
-- **Phase 9** — Plugin marketplace & enterprise collaboration
-- **Phase 10** — Production hardening, packaging, security, v1.0.0 (complete)
-
----
 
 ## License
 
-MIT License — see [LICENSE](LICENSE)
-
----
-
-## Support
-
-- Documentation: https://shellsense-ai.github.io/shellsense
-- Issues: https://github.com/shellsense-ai/shellsense/issues
-- Security: https://github.com/shellsense-ai/shellsense/security/policy
+MIT

@@ -11,13 +11,13 @@ COMPLETION_SCRIPTS: dict[str, str] = {}
 
 def _get_bash_completion() -> str:
     return """# ShellSense AI - Bash Completion
-_ss_completion() {
+_shellsense_completion() {
     local cur prev words cword
     _init_completion || return
 
     if [[ $cword -eq 1 ]]; then
         local suggestions
-        suggestions=$(ss suggest --limit 20 "$cur" 2>/dev/null | grep -oP '(?<=\\| )[^|]+(?= \\|)' | tr '\\n' ' ')
+        suggestions=$(shellsense suggest --limit 20 "$cur" 2>/dev/null | grep -oP '(?<=\\\\| )[^|]+(?= \\\\|)' | tr '\\n' ' ')
         COMPREPLY=($(compgen -W "$suggestions" -- "$cur"))
         return 0
     fi
@@ -25,7 +25,7 @@ _ss_completion() {
     local cmd="${words[0]}"
     if [[ $cword -eq 2 ]]; then
         local suggestions
-        suggestions=$(ss suggest --limit 20 "$cmd $cur" 2>/dev/null | grep -oP '(?<=\\| )[^|]+(?= \\|)' | tr '\\n' ' ')
+        suggestions=$(shellsense suggest --limit 20 "$cmd $cur" 2>/dev/null | grep -oP '(?<=\\\\| )[^|]+(?= \\\\|)' | tr '\\n' ' ')
         COMPREPLY=($(compgen -W "$suggestions" -- "$cur"))
         return 0
     fi
@@ -33,45 +33,45 @@ _ss_completion() {
     COMPREPLY=($(compgen -f -- "$cur"))
 }
 
-complete -F _ss_completion ss
+complete -F _shellsense_completion shellsense
 """
 
 
 def _get_zsh_completion() -> str:
     return """# ShellSense AI - Zsh Completion
-_ss_completion() {
+_shellsense_completion() {
     local -a suggestions
     local cur="${words[-1]}"
     local cmd="${words[1]}"
 
     if [[ $CURRENT -eq 2 ]]; then
-        suggestions=(${(f)"$(ss suggest --limit 20 "$cur" 2>/dev/null | grep -oP '(?<=\\| )[^|]+(?= \\|)')"})
+        suggestions=(${(f)"$(shellsense suggest --limit 20 "$cur" 2>/dev/null | grep -oP '(?<=\\\\| )[^|]+(?= \\\\|)')"})
         _describe 'command' suggestions
     elif [[ $CURRENT -eq 3 ]]; then
-        suggestions=(${(f)"$(ss suggest --limit 20 "$cmd $cur" 2>/dev/null | grep -oP '(?<=\\| )[^|]+(?= \\|)')"})
+        suggestions=(${(f)"$(shellsense suggest --limit 20 "$cmd $cur" 2>/dev/null | grep -oP '(?<=\\\\| )[^|]+(?= \\\\|)')"})
         _describe 'subcommand' suggestions
     fi
 }
 
-compdef _ss_completion ss
+compdef _shellsense_completion shellsense
 """
 
 
 def _get_fish_completion() -> str:
     return """# ShellSense AI - Fish Completion
-function __ss_complete
+function __shellsense_complete
     set -l cmd (commandline -op)
     set -l cur (commandline -t)
 
     if test (count $cmd) -eq 1
-        ss suggest --limit 20 $cur 2>/dev/null | string match -r '(?<=\\| )[^|]+(?= \\|)' | string trim
+        shellsense suggest --limit 20 $cur 2>/dev/null | string match -r '(?<=\\\\| )[^|]+(?= \\\\|)' | string trim
     else
         set -l full_cmd (string join " " $cmd)
-        ss suggest --limit 20 "$full_cmd $cur" 2>/dev/null | string match -r '(?<=\\| )[^|]+(?= \\|)' | string trim
+        shellsense suggest --limit 20 "$full_cmd $cur" 2>/dev/null | string match -r '(?<=\\\\| )[^|]+(?= \\\\|)' | string trim
     end
 end
 
-complete -c ss -f -a "(__ss_complete)"
+complete -c shellsense -f -a "(__shellsense_complete)"
 """
 
 
@@ -102,7 +102,7 @@ def install_completion(shell: str, target_dir: Path | None = None) -> Path:
         "zsh": ".zsh",
         "fish": ".fish",
     }
-    filename = f"ss-completion{ext.get(shell, '.sh')}"
+    filename = f"shellsense-completion{ext.get(shell, '.sh')}"
     filepath = target_dir / filename
     filepath.write_text(content)
     logger.info("Completion script written to %s", filepath)
