@@ -42,9 +42,13 @@ except:
 }
 
 __shellsense_show_suggestion() {
-    local suggestion=$(__shellsense_get_suggestion "$READLINE_LINE")
-    if [[ -n "$suggestion" && "$suggestion" != "$READLINE_LINE" ]]; then
-        local rest="${suggestion#$READLINE_LINE}"
+    local last_cmd=$(history 1 | sed 's/^ *[0-9]* *//')
+    if [[ -z "$last_cmd" ]]; then
+        return
+    fi
+    local suggestion=$(__shellsense_get_suggestion "$last_cmd")
+    if [[ -n "$suggestion" && "$suggestion" != "$last_cmd" ]]; then
+        local rest="${suggestion#$last_cmd}"
         if [[ -n "$rest" ]]; then
             echo -ne "\\033[90m${rest}\\033[0m"
         fi
